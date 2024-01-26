@@ -22,7 +22,7 @@
 
 - `text` — комментарий  пользователя;
 - `toxic` — целевой признак
-- 
+   
 ## Используемые библиотеки
 
 *pandas, numpy, matplotlib, sklearn, catboost, nltk*
