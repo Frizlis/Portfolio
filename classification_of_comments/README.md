@@ -15,6 +15,8 @@
 
 `NLP`, `Машинное обучение`
 
+***Библиотеки:***
+
 *`pandas`, `numpy`, `matplotlib`, `sklearn`, `catboost`, `nltk`*
 
 ## Выводы
