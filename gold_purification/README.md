@@ -14,6 +14,8 @@
 ## Инструменты
 `Машинное обучение в промышленности`
 
+***Библиотеки:***
+
 *`pandas`, `matplotlib`, `numpy`, `scikit-learn`, `seaborn`, `ydata_profiling`*
 
 ## Выводы
