@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # FirstFletApp app
 
 ## Run the app
@@ -79,3 +80,12 @@ flet build windows -v
 ```
 
 For more details on building Windows package, refer to the [Windows Packaging Guide](https://flet.dev/docs/publish/windows/).
+=======
+| Название проекта | Описание | Используемые библиотеки | 
+| :---------------------- | :---------------------- | :---------------------- |
+| [Исследование технологического процесса очистки золота](gold_purification) | Спрогнозировать концентрацию золота при проведении процесса очистки золота | *pandas, numpy, scikit-learn, matplotlib, исследовательский анализ данных* |
+| [Определение наиболее выгодного региона нефтедобычи](oilwells) | На основе данных геологи разведки выбрать район добычи нефти | *pandas, scikit-learn, бутстреп* |
+| [Прогнозирование количества заказов такси на следующий час](taxi_orders) | Разработка системы предсказания объема заказа | *pandas, scikit-learn, catboost, os, matplotlib* |
+| [Прогнозирование оттока клиентов оператора связи](telecommunications) | На основе данных о клиентах обучить модель для прогноза оттока клиентов | *pandas, scikit-learn, matplotlib, numpy, optuna, phik, shap, catboost* |
+| [Обучение модели классификации комментариев](classification_of_comments) | Обучение модели классификации комментариев | *pandas, scikit-learn, matplotlib, numpy, nltk, tf-idf* |
+>>>>>>> c4296938ee5e4df818c9fc7ae4b863aa45ec58ce
