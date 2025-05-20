@@ -3,6 +3,7 @@ import cv2
 import base64
 import threading
 import numpy as np
+import time
 from ml_integration import import_model, inference_model
 
 class VideoCaptureHandler:
@@ -15,13 +16,16 @@ class VideoCaptureHandler:
         # Настройки
         self.mirror = False
         self.inference = False
-        self.camera_resolution = (640, 480)
+        self.camera_resolution = (1920, 1080)
         # UI элементы
         self.start_btn = ft.ElevatedButton("Start", on_click=self.start_capture, disabled=True)
         self.stop_btn = ft.ElevatedButton("Stop", on_click=self.stop_capture, disabled=False)
         self.progress_bar = ft.ProgressBar(width=300, visible=False)
         self.status_text = ft.Text("", style=ft.TextThemeStyle.HEADLINE_SMALL, visible=False)
-        self.image = ft.Image(src="no_video_signal.png", width=640, height=480, fit=ft.ImageFit.CONTAIN)
+        self.image = ft.Image(src="D:\\Python\\Portfolio\\simple_app_with_cv\\no_video_signal.png", 
+                              width=640, 
+                              height=480, 
+                              fit=ft.ImageFit.CONTAIN,)
 
         # Запуск фоновой инициализации
         self._start_initialization()
@@ -58,21 +62,19 @@ class VideoCaptureHandler:
             raise RuntimeError("Ошибка чтения кадра")
         # Освобождаем ресурсы
         self.cap.release()
-          
+        
+        self.status_text.value = "Камера определена и готова к запуску."          
         self.initialized = True
-        self.progress_bar.visible = False
-        self.status_text.visible = False
+        self.progress_bar.visible = False        
         self.start_btn.disabled = not self.initialized
         self._safe_update()
 
-    def create_camera_tab(self):
-        return ft.Tab(
-            text="Камера",
-            icon=ft.Icons.VIDEO_CAMERA_BACK,
+    def create_camera(self):
+        return ft.Container(
             content=ft.Container(ft.Column(controls=[
                 self.status_text,
                 self.progress_bar,
-                ft.Container(self.image, expand=True, width=1000),
+                ft.Container(self.image, expand=True, width=1920),
                 ft.Row([
                     self.start_btn,
                     self.stop_btn,
@@ -84,7 +86,8 @@ class VideoCaptureHandler:
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             expand=True,
             padding=ft.padding.symmetric(vertical=30, horizontal=30),
-            )
+            ), 
+            expand=True,
         )
         
     def start_capture(self, e):
@@ -95,6 +98,7 @@ class VideoCaptureHandler:
             for _ in range(5):  # Пропуск кадров автонастройки
                 self.cap.read()
             threading.Thread(target=self.update_frame, daemon=True).start()
+            self.status_text.visible = False 
             self._safe_update()
 
     def stop_capture(self, e):
@@ -173,44 +177,67 @@ def main(page: ft.Page):
             ft.dropdown.Option("1280x720"),
             ft.dropdown.Option("1920x1080")
         ],
-        value="640x480"
-    )
-
-    # Обработчик применения настроек
-    def apply_settings(e):
-        camera_handler.mirror = mirror_switch.value
-        camera_handler.inference = inference_switch.value
-        # Здесь можно добавить изменение разрешения
+        value="1920x1080"
+    )    
+    
+    def open_dialog(e):
+        settings_dialog.open = True
+        page.update()
         
     def change_theme(e):
         page.theme_mode = (ft.ThemeMode.LIGHT if page.theme_mode == ft.ThemeMode.DARK else ft.ThemeMode.DARK)
         e.control.selected = not e.control.selected
         page.update()
+        
+    def close_dialog(e):
+        settings_dialog.open = False
+        page.update()
+        
+        # Обработчик применения настроек
+    def apply_settings(e):
+        camera_handler.mirror = mirror_switch.value
+        camera_handler.inference = inference_switch.value
+        try:
+            camera_handler.cap.set(cv2.CAP_PROP_FRAME_WIDTH, resolution_dropdown.value.split("x")[0]) 
+            camera_handler.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, resolution_dropdown.value.split("x")[1])
+            print("Разрешение изменено успешно!")
+        except Exception as ex:
+            print(f"Ошибка: {e}.")
+        print(camera_handler.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        print(camera_handler.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        close_dialog(e)
+        # Здесь можно добавить изменение разрешения
 
-    # Создаем вкладки
-    tabs = ft.Tabs(
-        tabs=[
-            ft.Tab(
-                text="Настройки",
-                icon=ft.Icons.SETTINGS,
-                content=ft.Row([ 
-                    ft.Column([
-                        ft.Text("Настройки камеры", size=20),
+    settings_dialog = ft.AlertDialog(
+        title=ft.Text("Settings"),
+        content=ft.Column([
+                        ft.Row([ft.Text("Настройки камеры", size=20),
+                                ft.IconButton(icon=ft.Icons.SUNNY, 
+                                              selected_icon=ft.Icons.MODE_NIGHT, 
+                                              on_click=change_theme)]),
                         mirror_switch,
                         inference_switch,
                         resolution_dropdown,
-                        ft.ElevatedButton("Применить настройки", on_click=apply_settings)
-                    ], spacing=15),
-                    ft.IconButton(icon=ft.Icons.SUNNY, selected_icon=ft.Icons.MODE_NIGHT, on_click=change_theme, selected=False,),
-                ], 
-                               vertical_alignment=ft.CrossAxisAlignment.START,
-                               alignment=ft.MainAxisAlignment.SPACE_AROUND)
-            ),
-            camera_handler.create_camera_tab()
-        ],
-        expand=True
+                    ], 
+                          tight=True,
+                          spacing=15),
+         actions=[
+            ft.TextButton("Сохранить", on_click=apply_settings),
+            ft.TextButton("Отмена", on_click=close_dialog)
+        ]
     )
     
-    page.add(tabs)
+    page.overlay.append(settings_dialog)
+    
+    page.appbar = ft.AppBar(
+        actions=[
+            ft.IconButton(
+                icon=ft.Icons.SETTINGS,
+                on_click=open_dialog,
+            )
+        ]
+    )
+    
+    page.add(camera_handler.create_camera())
 
 ft.app(target=main)
