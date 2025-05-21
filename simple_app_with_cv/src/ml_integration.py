@@ -34,6 +34,17 @@ def inference_model(model, classNames:dict, frame:cv2.typing.MatLike)->cv2.typin
     
     return frame
 
+def draw_gird(frame:cv2.typing.MatLike)->cv2.typing.MatLike:
+    h, w = frame.shape[:2]
+    mod_1 = 1
+    mod_2 = 5
+    cv2.line(frame, (0, int(h*mod_1/mod_2)), (w, int(h*mod_1/mod_2)), (255, 255, 255), thickness=1)
+    cv2.line(frame, (0, int(h*(mod_2 - mod_1)/mod_2)), (w, int(h*(mod_2 - mod_1)/mod_2)), (255, 255, 255), thickness=1)
+    cv2.line(frame, (int(w*mod_1/mod_2), 0), (int(w*mod_1/mod_2), h), (255, 255, 255), thickness=1)
+    cv2.line(frame, (int(w*(mod_2 - mod_1)/mod_2), 0), (int(w*(mod_2 - mod_1)/mod_2), h), (255, 255, 255), thickness=1)
+    
+    return frame
+
 
 if __name__ == "__main__":
     import_model("yolo11n.pt")

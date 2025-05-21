@@ -2,7 +2,7 @@ import flet as ft
 import cv2
 import base64
 import threading
-from ml_integration import import_model, inference_model
+from ml_integration import import_model, inference_model, draw_gird
 import os
 
 class VideoCaptureHandler:
@@ -18,25 +18,31 @@ class VideoCaptureHandler:
         self.gride = False
         self.camera_resolution = (1920, 1080)
         # UI элементы
-        self.start_btn = ft.ElevatedButton("Start", on_click=self.start_capture, color=ft.Colors.BLUE_900, bgcolor=ft.Colors.CYAN_ACCENT_700, disabled=True)
-        self.stop_btn = ft.ElevatedButton("Stop", on_click=self.stop_capture, color=ft.Colors.BLUE_900, bgcolor=ft.Colors.CYAN_ACCENT_700, disabled=False)
+        self.start_btn = ft.ElevatedButton("Start", on_click=self.start_capture, color=ft.Colors.WHITE, bgcolor=ft.Colors.CYAN_ACCENT_700, disabled=True)
+        self.stop_btn = ft.ElevatedButton("Stop", on_click=self.stop_capture, color=ft.Colors.WHITE, bgcolor=ft.Colors.CYAN_ACCENT_700, disabled=False)
+        self.reset_cam = ft.IconButton(icon=ft.Icons.UPDATE, on_click=self._start_initialization, icon_color=ft.Colors.WHITE, bgcolor=ft.Colors.CYAN_ACCENT_700, disabled=False)
         self.progress_bar = ft.ProgressBar(width=300, visible=False)
         self.status_text = ft.Text("", style=ft.TextThemeStyle.HEADLINE_SMALL, weight=ft.FontWeight.BOLD, visible=False, color=ft.Colors.BLUE_900)
+        self.text_container = ft.Container(self.status_text, border=ft.border.all(2, ft.Colors.CYAN_ACCENT_700), border_radius=25, padding=ft.padding.symmetric(horizontal=10, vertical=5))
         self.image = ft.Image(src="simple_app_with_cv/src/assets/Camera_waiting.png", 
-                              width=640, 
-                              height=480, 
-                              fit=ft.ImageFit.CONTAIN,)
-        self.image_container = ft.Container(self.image, expand=True, width=1920, border_radius=25)
-        print("Current Dirrectory", os.getcwd())
+                              fit=ft.ImageFit.CONTAIN,
+                              expand=True,
+                              height=1080,
+                              width=1940)
+        self.image_container = ft.Container(self.image, expand=True, alignment=ft.alignment.center, 
+                                            padding=0, margin=0, border_radius=25, 
+                                            height=1080, width=1940, 
+                                            clip_behavior=ft.ClipBehavior.ANTI_ALIAS,)
 
         # Запуск фоновой инициализации
         self._start_initialization()
         
-    def _start_initialization(self):
+    def _start_initialization(self, e=None):
         # Запуск фоновой инициализации
         self.progress_bar.visible = True
+        self.text_container.visible = True
         self.status_text.value = "Поиск камеры..."
-        self.status_text.visible = True
+        self.status_text.visible = True      
         self._safe_update()
         # Запуск потоков
         threading.Thread(target=self._preinit_camera, daemon=True).start() 
@@ -84,12 +90,13 @@ class VideoCaptureHandler:
     def create_camera(self):
         return ft.Container(
             content=ft.Container(ft.Column(controls=[
-                ft.Container(self.status_text, border=ft.border.all(2, ft.Colors.CYAN_ACCENT_700), border_radius=25, padding=ft.padding.symmetric(horizontal=10, vertical=5)),
+                self.text_container,
                 self.progress_bar,
-                ft.Container(self.image, expand=True, width=1920, border_radius=25),
+                self.image_container,        
                 ft.Row([
                     self.start_btn,
                     self.stop_btn,
+                    self.reset_cam,
                 ], 
                        alignment=ft.MainAxisAlignment.CENTER)
             ],
@@ -111,6 +118,7 @@ class VideoCaptureHandler:
                 self.cap.read()
             threading.Thread(target=self.update_frame, daemon=True).start()
             self.status_text.visible = False 
+            self.text_container.visible = False
             self.image_container.shadow = ft.BoxShadow(
                 spread_radius=1,
                 blur_radius=15,
@@ -134,11 +142,14 @@ class VideoCaptureHandler:
             ret, frame = self.cap.read()
             if not ret: continue
             
+            if self.mirror:
+                frame = cv2.flip(frame, 1)
+            
             if self.inference:
                 frame = inference_model(self.model, self.classNames, frame)
                 
-            if self.mirror:
-                frame = cv2.flip(frame, 1)
+            if self.gride:
+                frame = draw_gird(frame)         
             
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             _, buffer = cv2.imencode('.jpg', frame)
@@ -162,6 +173,7 @@ def main(page: ft.Page):
     # Элементы настроек
     mirror_switch = ft.Ref[ft.Switch]()
     inference_switch = ft.Ref[ft.Switch]()
+    grid_switch = ft.Ref[ft.Switch]()
     resolution_dropdown = ft.Ref[ft.Dropdown]()
     
     def open_dialog(e):
@@ -181,6 +193,7 @@ def main(page: ft.Page):
     def apply_settings(e):
         camera_handler.mirror = mirror_switch.current.value
         camera_handler.inference = inference_switch.current.value
+        camera_handler.gride = grid_switch.current.value
         try:
             camera_handler.cap.set(cv2.CAP_PROP_FRAME_WIDTH, resolution_dropdown.current.value.split("x")[0]) 
             camera_handler.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, resolution_dropdown.current.value.split("x")[1])
@@ -203,6 +216,7 @@ def main(page: ft.Page):
                     on_click=change_theme)
             ]),
             ft.Switch(ref=mirror_switch, label="Зеркальное отображение"),
+            ft.Switch(ref=grid_switch, label="Сетка"),
             ft.Switch(ref=inference_switch, label="Детекция"),
             ft.Dropdown(
                 ref=resolution_dropdown,
