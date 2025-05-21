@@ -17,10 +17,10 @@ class VideoCaptureHandler:
         self.inference = False
         self.camera_resolution = (1920, 1080)
         # UI элементы
-        self.start_btn = ft.ElevatedButton("Start", on_click=self.start_capture, disabled=True)
-        self.stop_btn = ft.ElevatedButton("Stop", on_click=self.stop_capture, disabled=False)
+        self.start_btn = ft.ElevatedButton("Start", on_click=self.start_capture, color=ft.Colors.BLUE_900, bgcolor=ft.Colors.CYAN_ACCENT_700, disabled=True)
+        self.stop_btn = ft.ElevatedButton("Stop", on_click=self.stop_capture, color=ft.Colors.BLUE_900, bgcolor=ft.Colors.CYAN_ACCENT_700, disabled=False)
         self.progress_bar = ft.ProgressBar(width=300, visible=False)
-        self.status_text = ft.Text("", style=ft.TextThemeStyle.HEADLINE_SMALL, visible=False)
+        self.status_text = ft.Text("", style=ft.TextThemeStyle.HEADLINE_SMALL, weight=ft.FontWeight.BOLD, visible=False, color=ft.Colors.BLUE_900)
         self.image = ft.Image(src="simple_app_with_cv/src/assets/Camera_waiting.png", 
                               width=640, 
                               height=480, 
@@ -59,7 +59,7 @@ class VideoCaptureHandler:
         """Фоновая инициализация камеры"""
         self.cap = cv2.VideoCapture(0, cv2.CAP_MSMF)
         if not self.cap.isOpened(): 
-            self._error_camera("Ошибка чтения кадра")
+            self._error_camera("Камера недоступна")
             raise RuntimeError("Камера недоступна")
         # Предварительная настройка параметров
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.camera_resolution[0])
@@ -82,7 +82,7 @@ class VideoCaptureHandler:
     def create_camera(self):
         return ft.Container(
             content=ft.Container(ft.Column(controls=[
-                self.status_text,
+                ft.Container(self.status_text, border=ft.border.all(2, ft.Colors.CYAN_ACCENT_700), border_radius=25, padding=ft.padding.symmetric(horizontal=10, vertical=5)),
                 self.progress_bar,
                 ft.Container(self.image, expand=True, width=1920),
                 ft.Row([
@@ -139,33 +139,6 @@ class VideoCaptureHandler:
             if self.running:
                 self.image.src_base64 = img_base64
                 self.image.update()
-    
-    def inference_model(self, frame):
-        prediction = self.model.predict(frame)
-        
-        for r in prediction:
-            boxes = r.boxes
-            for box in boxes:
-                x1, y1, x2, y2 = box.xyxy[0]
-                x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-                
-                # class confidence
-                confidence = math.ceil((box.conf[0]*100))/100
-                
-                # class name
-                cls = int(box.cls[0])
-                color = (255/len(self.classNames)*cls, 255/len(self.classNames)*(len(self.classNames)-cls), 255*len(self.classNames)/(cls+1))
-                
-                # object details
-                font = cv2.FONT_HERSHEY_SIMPLEX
-                fontScale = 1
-                thickness = 2
-                
-                cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
-                cv2.putText(frame, self.classNames[cls], [x1, y1-10], font, fontScale, color, thickness)
-                cv2.putText(frame, str(confidence), [x2-80, y1+30], font, fontScale, color, thickness)           
-        
-        return frame
 
 def main(page: ft.Page):
     page.title = "Camera App"
@@ -215,9 +188,10 @@ def main(page: ft.Page):
         content=ft.Column([
             ft.Row([
                 ft.Text("Настройки камеры", size=20),
-                ft.IconButton(icon=ft.Icons.SUNNY, 
-                            selected_icon=ft.Icons.MODE_NIGHT, 
-                            on_click=change_theme)
+                ft.IconButton(
+                    icon=ft.Icons.SUNNY, 
+                    selected_icon=ft.Icons.MODE_NIGHT, 
+                    on_click=change_theme)
             ]),
             ft.Switch(ref=mirror_switch, label="Зеркальное отображение"),
             ft.Switch(ref=inference_switch, label="Детекция"),
@@ -246,6 +220,7 @@ def main(page: ft.Page):
             ft.IconButton(
                 icon=ft.Icons.SETTINGS,
                 on_click=open_dialog,
+                icon_color=ft.Colors.BLUE_900,
             )
         ]
     )
