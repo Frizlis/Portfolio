@@ -25,6 +25,7 @@ class VideoCaptureHandler:
                               width=640, 
                               height=480, 
                               fit=ft.ImageFit.CONTAIN,)
+        self.image_container = ft.Container(self.image, expand=True, width=1920, border_radius=25)
         print("Current Dirrectory", os.getcwd())
 
         # Запуск фоновой инициализации
@@ -84,7 +85,7 @@ class VideoCaptureHandler:
             content=ft.Container(ft.Column(controls=[
                 ft.Container(self.status_text, border=ft.border.all(2, ft.Colors.CYAN_ACCENT_700), border_radius=25, padding=ft.padding.symmetric(horizontal=10, vertical=5)),
                 self.progress_bar,
-                ft.Container(self.image, expand=True, width=1920),
+                ft.Container(self.image, expand=True, width=1920, border_radius=25),
                 ft.Row([
                     self.start_btn,
                     self.stop_btn,
@@ -109,6 +110,13 @@ class VideoCaptureHandler:
                 self.cap.read()
             threading.Thread(target=self.update_frame, daemon=True).start()
             self.status_text.visible = False 
+            self.image_container.shadow = ft.BoxShadow(
+                spread_radius=1,
+                blur_radius=15,
+                color=ft.Colors.BLUE_GREY_300,
+                offset=ft.Offset(0, 0),
+                blur_style=ft.ShadowBlurStyle.OUTER,
+            )
             self._safe_update()
 
     def stop_capture(self, e):
@@ -117,7 +125,7 @@ class VideoCaptureHandler:
             self.cap.release()
         self.image.src_base64 = None
         self.stop_btn.disabled = True
-        # self.image.update()
+        self.image_container.shadow = None
         self._safe_update()
 
     def update_frame(self):
