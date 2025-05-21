@@ -1,12 +1,13 @@
 from ultralytics import YOLO
 import math
 import cv2
+import numpy as np
 
-def import_model(path: str="D:\Python\jupiter\yolo11n.pt"):
+def import_model(path: str="yolo11n.pt"):
         model = YOLO(path)
         return model
     
-def inference_model(model, classNames, frame,):
+def inference_model(model, classNames:dict, frame:cv2.typing.MatLike)->cv2.typing.MatLike:
     prediction = model.predict(frame)
     
     for r in prediction:
@@ -35,4 +36,4 @@ def inference_model(model, classNames, frame,):
 
 
 if __name__ == "__main__":
-    import_model("D:\Python\jupiter\yolo11n.pt")
+    import_model("yolo11n.pt")

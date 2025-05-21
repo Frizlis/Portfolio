@@ -15,6 +15,7 @@ class VideoCaptureHandler:
         # Настройки
         self.mirror = False
         self.inference = False
+        self.gride = False
         self.camera_resolution = (1920, 1080)
         # UI элементы
         self.start_btn = ft.ElevatedButton("Start", on_click=self.start_capture, color=ft.Colors.BLUE_900, bgcolor=ft.Colors.CYAN_ACCENT_700, disabled=True)
