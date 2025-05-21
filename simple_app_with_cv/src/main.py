@@ -2,9 +2,8 @@ import flet as ft
 import cv2
 import base64
 import threading
-import numpy as np
-import time
 from ml_integration import import_model, inference_model
+import os
 
 class VideoCaptureHandler:
     def __init__(self, page):
@@ -22,10 +21,11 @@ class VideoCaptureHandler:
         self.stop_btn = ft.ElevatedButton("Stop", on_click=self.stop_capture, disabled=False)
         self.progress_bar = ft.ProgressBar(width=300, visible=False)
         self.status_text = ft.Text("", style=ft.TextThemeStyle.HEADLINE_SMALL, visible=False)
-        self.image = ft.Image(src="D:\\Python\\Portfolio\\simple_app_with_cv\\no_video_signal.png", 
+        self.image = ft.Image(src="simple_app_with_cv/src/assets/Camera_waiting.png", 
                               width=640, 
                               height=480, 
                               fit=ft.ImageFit.CONTAIN,)
+        print("Current Dirrectory", os.getcwd())
 
         # Запуск фоновой инициализации
         self._start_initialization()
@@ -48,10 +48,18 @@ class VideoCaptureHandler:
         except Exception as e:
             print(f"Ошибка обновления UI: {str(e)}")
 
+    def _error_camera(self, message):
+            self.status_text.value = message
+            self.image.src = "simple_app_with_cv/src/assets/Camera_no_signal.png"
+            self.progress_bar.visible = False
+            self.stop_btn.disabled = True
+            self._safe_update()
+
     def _preinit_camera(self):
         """Фоновая инициализация камеры"""
         self.cap = cv2.VideoCapture(0, cv2.CAP_MSMF)
-        if not self.cap.isOpened():
+        if not self.cap.isOpened(): 
+            self._error_camera("Ошибка чтения кадра")
             raise RuntimeError("Камера недоступна")
         # Предварительная настройка параметров
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.camera_resolution[0])
@@ -59,14 +67,16 @@ class VideoCaptureHandler:
         # Тестовый кадр
         ret, _ = self.cap.read()
         if not ret:
+            self._error_camera("Ошибка чтения кадра")
             raise RuntimeError("Ошибка чтения кадра")
         # Освобождаем ресурсы
         self.cap.release()
         
-        self.status_text.value = "Камера определена и готова к запуску."          
+        self.status_text.value = "Камера определена и готова к запуску"          
         self.initialized = True
         self.progress_bar.visible = False        
         self.start_btn.disabled = not self.initialized
+        self.image.src = "simple_app_with_cv/src/assets/Camera_ready.png"
         self._safe_update()
 
     def create_camera(self):
@@ -168,17 +178,9 @@ def main(page: ft.Page):
     # Инициализация обработчика камеры
     camera_handler = VideoCaptureHandler(page)
     # Элементы настроек
-    mirror_switch = ft.Switch(label="Зеркальное отображение")
-    inference_switch = ft.Switch(label="Детекция")
-    resolution_dropdown = ft.Dropdown(
-        label="Разрешение",
-        options=[
-            ft.dropdown.Option("640x480"),
-            ft.dropdown.Option("1280x720"),
-            ft.dropdown.Option("1920x1080")
-        ],
-        value="1920x1080"
-    )    
+    mirror_switch = ft.Ref[ft.Switch]()
+    inference_switch = ft.Ref[ft.Switch]()
+    resolution_dropdown = ft.Ref[ft.Dropdown]()
     
     def open_dialog(e):
         settings_dialog.open = True
@@ -195,11 +197,11 @@ def main(page: ft.Page):
         
         # Обработчик применения настроек
     def apply_settings(e):
-        camera_handler.mirror = mirror_switch.value
-        camera_handler.inference = inference_switch.value
+        camera_handler.mirror = mirror_switch.current.value
+        camera_handler.inference = inference_switch.current.value
         try:
-            camera_handler.cap.set(cv2.CAP_PROP_FRAME_WIDTH, resolution_dropdown.value.split("x")[0]) 
-            camera_handler.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, resolution_dropdown.value.split("x")[1])
+            camera_handler.cap.set(cv2.CAP_PROP_FRAME_WIDTH, resolution_dropdown.current.value.split("x")[0]) 
+            camera_handler.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, resolution_dropdown.current.value.split("x")[1])
             print("Разрешение изменено успешно!")
         except Exception as ex:
             print(f"Ошибка: {e}.")
@@ -211,19 +213,29 @@ def main(page: ft.Page):
     settings_dialog = ft.AlertDialog(
         title=ft.Text("Settings"),
         content=ft.Column([
-                        ft.Row([ft.Text("Настройки камеры", size=20),
-                                ft.IconButton(icon=ft.Icons.SUNNY, 
-                                              selected_icon=ft.Icons.MODE_NIGHT, 
-                                              on_click=change_theme)]),
-                        mirror_switch,
-                        inference_switch,
-                        resolution_dropdown,
-                    ], 
-                          tight=True,
-                          spacing=15),
-         actions=[
+            ft.Row([
+                ft.Text("Настройки камеры", size=20),
+                ft.IconButton(icon=ft.Icons.SUNNY, 
+                            selected_icon=ft.Icons.MODE_NIGHT, 
+                            on_click=change_theme)
+            ]),
+            ft.Switch(ref=mirror_switch, label="Зеркальное отображение"),
+            ft.Switch(ref=inference_switch, label="Детекция"),
+            ft.Dropdown(
+                ref=resolution_dropdown,
+                label="Разрешение",
+                options=[
+                    ft.dropdown.Option("640x480"),
+                    ft.dropdown.Option("1280x720"),
+                    ft.dropdown.Option("1920x1080")
+                ],
+                value="1920x1080"
+            )], 
+            tight=True,
+            spacing=15),
+        actions=[
             ft.TextButton("Сохранить", on_click=apply_settings),
-            ft.TextButton("Отмена", on_click=close_dialog)
+            ft.TextButton("Отмена", on_click=close_dialog),
         ]
     )
     
