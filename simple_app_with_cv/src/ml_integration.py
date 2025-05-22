@@ -47,4 +47,16 @@ def draw_gird(frame:cv2.typing.MatLike)->cv2.typing.MatLike:
 
 
 if __name__ == "__main__":
-    import_model("yolo11n.pt")
+    cap = cv2.VideoCapture(0, cv2.CAP_MSMF)  # Создаем ОДИН объект
+    print("Объект создан")
+    width_success = cap.set(cv2.CAP_PROP_FRAME_WIDTH, 360)
+    height_success = cap.set(cv2.CAP_PROP_FRAME_WIDTH, 240)
+    actual_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+    print(f"Width set: {width_success}, Actual width: {cap.get(cv2.CAP_PROP_FRAME_WIDTH)}")    
+    print(f"Height set {height_success}, Height get: {cap.get(cv2.CAP_PROP_FRAME_HEIGHT)}")
+    width_success = cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)    
+    height_success = cap.set(cv2.CAP_PROP_FRAME_WIDTH, 480)
+    actual_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+    print(f"Width set: {width_success}, Actual width: {actual_width}")
+    print(f"Height get: {cap.get(cv2.CAP_PROP_FRAME_HEIGHT)}")
+    

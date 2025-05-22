@@ -4,6 +4,7 @@ import base64
 import threading
 from ml_integration import import_model, inference_model, draw_gird
 import os
+import time
 
 class VideoCaptureHandler:
     def __init__(self, page):
@@ -114,6 +115,8 @@ class VideoCaptureHandler:
             self.running = True
             self.stop_btn.disabled = False
             self.cap.open(0, cv2.CAP_DSHOW)
+            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.camera_resolution[0])
+            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.camera_resolution[1])
             for _ in range(5):  # Пропуск кадров автонастройки
                 self.cap.read()
             threading.Thread(target=self.update_frame, daemon=True).start()
@@ -159,6 +162,14 @@ class VideoCaptureHandler:
             if self.running:
                 self.image.src_base64 = img_base64
                 self.image.update()
+        
+    def camera_set(self, W, H):
+        self.camera_resolution = (W, H)
+        if not self.cap.isOpened():
+            self.cap.open(0, cv2.CAP_DSHOW)        
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.camera_resolution[0])
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.camera_resolution[1])
+        return (self.cap.get(cv2.CAP_PROP_FRAME_WIDTH), self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
 def main(page: ft.Page):
     page.title = "Camera App"
@@ -167,6 +178,7 @@ def main(page: ft.Page):
     page.window.min_height = 800
     page.window.min_width = 800
     page.vertical_alignment = ft.MainAxisAlignment.CENTER
+    
     
     # Инициализация обработчика камеры
     camera_handler = VideoCaptureHandler(page)
@@ -177,7 +189,41 @@ def main(page: ft.Page):
     resolution_dropdown = ft.Ref[ft.Dropdown]()
     
     def open_dialog(e):
+        mirror_switch.current.value = camera_handler.mirror
+        inference_switch.current.value = camera_handler.inference
+        grid_switch.current.value = camera_handler.gride
+        try:
+            resolution_dropdown.current.value = str(int(camera_handler.cap.get(cv2.CAP_PROP_FRAME_WIDTH))) + "x" + str(int(camera_handler.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+        except:
+            resolution_dropdown.current.value = None
         settings_dialog.open = True
+        page.update()
+    
+    def resolution_change(e):
+        snack_bar = ft.SnackBar(                
+                content=ft.Text("Ошибка: возможно ваша камера не поддерживает данное разрешение", color=ft.Colors.WHITE),
+                bgcolor=ft.Colors.RED_700,
+                open=True
+            )
+        try:
+            W = int(resolution_dropdown.current.value.split("x")[0])
+            H = int(resolution_dropdown.current.value.split("x")[1])
+            new_W, new_H = camera_handler.camera_set(W, H)
+            if W==new_W and H == new_H:
+                snack_bar.content = ft.Text("Разрешение изменено успешно!", color=ft.Colors.WHITE)
+                snack_bar.bgcolor = ft.Colors.CYAN_ACCENT_700
+            else:
+                snack_bar.content = ft.Text(f"Ошибка: Разрешение не поддерживается. Текущее разрешение {int(new_W)}x{int(new_H)}", color=ft.Colors.WHITE)
+                snack_bar.bgcolor = ft.Colors.YELLOW_700
+                resolution_dropdown.current.value = f"{int(new_W)}x{int(new_H)}"
+        except Exception as exc:
+            print(exc)
+            snack_bar.content = ft.Text("Ошибка:  Дождитесь определения камеры. Возможно ваша камера не поддерживает данное разрешение.", color=ft.Colors.WHITE)
+            snack_bar.bgcolor = ft.Colors.RED_700
+        page.add(snack_bar)
+        page.update()
+        time.sleep(3)
+        snack_bar.open = False
         page.update()
         
     def change_theme(e):
@@ -194,14 +240,6 @@ def main(page: ft.Page):
         camera_handler.mirror = mirror_switch.current.value
         camera_handler.inference = inference_switch.current.value
         camera_handler.gride = grid_switch.current.value
-        try:
-            camera_handler.cap.set(cv2.CAP_PROP_FRAME_WIDTH, resolution_dropdown.current.value.split("x")[0]) 
-            camera_handler.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, resolution_dropdown.current.value.split("x")[1])
-            print("Разрешение изменено успешно!")
-        except Exception as ex:
-            print(f"Ошибка: {e}.")
-        print(camera_handler.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        print(camera_handler.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         close_dialog(e)
         # Здесь можно добавить изменение разрешения
 
@@ -220,13 +258,15 @@ def main(page: ft.Page):
             ft.Switch(ref=inference_switch, label="Детекция"),
             ft.Dropdown(
                 ref=resolution_dropdown,
-                label="Разрешение",
+                label="Quality",
                 options=[
+                    ft.dropdown.Option("320x240"),
                     ft.dropdown.Option("640x480"),
                     ft.dropdown.Option("1280x720"),
                     ft.dropdown.Option("1920x1080")
                 ],
-                value="1920x1080"
+                value="640x480",
+                on_change = resolution_change,
             )], 
             tight=True,
             spacing=15),
