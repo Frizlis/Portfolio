@@ -43,7 +43,9 @@ class VideoCaptureHandler:
         self.progress_bar.visible = True
         self.text_container.visible = True
         self.status_text.value = "Поиск камеры..."
-        self.status_text.visible = True      
+        self.status_text.visible = True   
+        self.image.src_base64 = None
+        self.image.src = "simple_app_with_cv/src/assets/Camera_waiting.png"
         self._safe_update()
         # Запуск потоков
         threading.Thread(target=self._preinit_camera, daemon=True).start() 
@@ -162,6 +164,10 @@ class VideoCaptureHandler:
             if self.running:
                 self.image.src_base64 = img_base64
                 self.image.update()
+        
+        if not self.cap.isOpened():
+            self.image.src_base64 = None
+            self.image.src = "simple_app_with_cv/src/assets/Camera_no_signal.png"
         
     def camera_set(self, W, H):
         self.camera_resolution = (W, H)
